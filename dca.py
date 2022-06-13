@@ -27,7 +27,7 @@ def getOrderHistory(symbol):
     endpoint = '/api/v3/allOrders'
 
     url = urljoin(BASE_URL, endpoint)
-
+    # edit startTime as needed - toDO -> pass it to getOrderHistory() as param
     startTime = int((datetime.datetime(2022, 4, 15).timestamp()) * 1000)
     timestamp = int((time.time()) * 1000)
 
