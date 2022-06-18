@@ -1,34 +1,58 @@
-import requests
-import pandas as pd
-import datetime
-import time
+import os 
 import json
+import logging
+import time
+import datetime
+import sys
+import requests
 import hmac
 import hashlib
+import pandas as pd
 from urllib.parse import urljoin, urlencode
 
-#-------- Variables --------#
-# Edit variables: API_KEY, SECRET_KEY, cryptos, stableCoins
-API_KEY = '55cb3280f0d8273e3f59139808b56987'
-SECRET_KEY = '44e58e460b33d7dd565922fbc59ac920'
-BASE_URL = 'https://api.binance.com'
-HEADERS = {'X-MBX-APIKEY': API_KEY}
-cryptos = ['BTC', 'ETH', 'DOT']
-stableCoins = ['USDT', 'BUSD']
 
+#Get path to settings file
+settingsFile = 'settings.json'
+invocationDir = os.path.dirname(__file__)
+settingsFilePath = os.path.join(invocationDir, settingsFile)
+
+#Check if settings file exists, abort execution if not
+if not os.path.isfile(settingsFilePath):
+    print('Settings File does not exists.')
+    time.sleep(5)
+    sys.exit()
+
+#Load settings.json to settings variable
+with open (settingsFilePath, 'r') as file:
+    settings = json.loads(file.read())
+
+#Define variables using values from settings file
+API_KEY = settings['API_KEY']
+SECRET_KEY = settings['SECRET_KEY']
+BASE_URL = settings['BASE_URL']
+HEADERS = {'X-MBX-APIKEY': API_KEY}
+cryptos = settings['cryptos']
+stableCoins = settings['stableCoins']
+
+#Define logging
+logFile = settings['logFile']
+level = settings['logLevel']
+logFormat = '%(asctime)s - %(levelname)s - %(message)s'  
+
+#Create list of symbols from cryptos & stableCoins ie. BTCUSDT, ETHBUSD.. you can only get order history for specific symbol 
 symbols = []
 for crypto in cryptos:
     for stableCoin in stableCoins:
         symbols.append(crypto + stableCoin)
 
 #-------- Main function --------#
-# def getOrderHistory()
+# # def getOrderHistory()
 def getOrderHistory(symbol):
     endpoint = '/api/v3/allOrders'
 
     url = urljoin(BASE_URL, endpoint)
     # edit startTime as needed - toDO -> pass it to getOrderHistory() as param
-    startTime = int((datetime.datetime(2022, 4, 15).timestamp()) * 1000)
+    startTime = int((datetime.datetime(2022, 4, 15).timestamp()) * 1000) 
     timestamp = int((time.time()) * 1000)
 
     params = {'symbol' : symbol,
@@ -53,6 +77,7 @@ def getOrderHistory(symbol):
                 'executedQty': float(order['executedQty']),
                     'totalPrice': float(order['cummulativeQuoteQty'])}, ignore_index=True)
     return df
+
 
 
 # Create dataframe with all symbols
@@ -86,8 +111,7 @@ for crypto in cryptos:
     }, ignore_index=True)
 
 totalSpent = dca_df['totalPrice'].sum()
-
-#-------- Print output --------#
 print(datetime.datetime.today())
 print(dca_df)
 print("total spent: " + str(round(totalSpent,3)))
+
