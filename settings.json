@@ -1,0 +1,19 @@
+{
+   "API_KEY":"your_api_key",
+   "SECRET_KEY":"your_secret_key",
+   "BASE_URL":"https://api.binance.com",
+   "cryptos":[
+      "DOT",
+      "BTC",
+      "LINK",
+      "THETA",
+      "SOL",
+      "ETH"
+   ],
+   "stableCoins":[
+      "USDT",
+      "BUSD"
+   ],
+   "logFile":"dca.log",
+   "logLevel":"DEBUG"
+}
