@@ -31,8 +31,13 @@ API_KEY = settings['API_KEY']
 SECRET_KEY = settings['SECRET_KEY']
 BASE_URL = settings['BASE_URL']
 HEADERS = {'X-MBX-APIKEY': API_KEY}
+orderHistoryFile = settings['orderHistoryFile']
 cryptos = settings['cryptos']
 stableCoins = settings['stableCoins']
+
+startTime = settings['startTime']
+dt_startTime = datetime.datetime.strptime(startTime, '%d.%m.%Y')
+ts_startTime = int((datetime.datetime(dt_startTime.year, dt_startTime.month, dt_startTime.day).timestamp()) * 1000) 
 
 #Define logging
 logFile = settings['logFile']
@@ -47,12 +52,10 @@ for crypto in cryptos:
 
 #-------- Main function --------#
 # # def getOrderHistory()
-def getOrderHistory(symbol):
+def getOrderHistory(symbol, startTime):
     endpoint = '/api/v3/allOrders'
 
     url = urljoin(BASE_URL, endpoint)
-    # edit startTime as needed - toDO -> pass it to getOrderHistory() as param
-    startTime = int((datetime.datetime(2022, 4, 15).timestamp()) * 1000) 
     timestamp = int((time.time()) * 1000)
 
     params = {'symbol' : symbol,
@@ -83,7 +86,7 @@ def getOrderHistory(symbol):
 # Create dataframe with all symbols
 symbol_df = pd.DataFrame()
 for symbol in symbols:
-    orderHistory = getOrderHistory(symbol)
+    orderHistory = getOrderHistory(symbol=symbol, startTime=ts_startTime)
     if not orderHistory.empty:
         totalAmount = orderHistory['executedQty'].sum()
         totalPrice = orderHistory['totalPrice'].sum()
@@ -114,4 +117,3 @@ totalSpent = dca_df['totalPrice'].sum()
 print(datetime.datetime.today())
 print(dca_df)
 print("total spent: " + str(round(totalSpent,3)))
-
