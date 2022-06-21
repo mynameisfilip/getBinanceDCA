@@ -40,9 +40,10 @@ dt_startTime = datetime.datetime.strptime(startTime, '%d.%m.%Y')
 ts_startTime = int((datetime.datetime(dt_startTime.year, dt_startTime.month, dt_startTime.day).timestamp()) * 1000) 
 
 #Define logging
-logFile = settings['logFile']
-level = settings['logLevel']
+logFile = os.path.join(invocationDir, (settings['logFile']))
+logLevel = settings['logLevel']
 logFormat = '%(asctime)s - %(levelname)s - %(message)s'  
+logging.basicConfig(filename=logFile, encoding='utf-8', level=logLevel, format=logFormat)
 
 #Create list of symbols from cryptos & stableCoins ie. BTCUSDT, ETHBUSD.. you can only get order history for specific symbol 
 symbols = []
@@ -50,8 +51,12 @@ for crypto in cryptos:
     for stableCoin in stableCoins:
         symbols.append(crypto + stableCoin)
 
-#-------- Main function --------#
-# # def getOrderHistory()
+#-------- Main functions --------#
+def processResponseCode(response):
+    if response.status_code != 200:
+        logging.error(response.json())
+        sys.exit()
+
 def getOrderHistory(symbol, startTime):
     endpoint = '/api/v3/allOrders'
 
@@ -65,7 +70,9 @@ def getOrderHistory(symbol, startTime):
     query_string = urlencode(params)
     params['signature'] = hmac.new(SECRET_KEY.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
     r = requests.get(url=url, headers=HEADERS, params=params)
-    
+
+    processResponseCode(r)
+
     orders = r.json()
     df = pd.DataFrame()
 
@@ -81,7 +88,7 @@ def getOrderHistory(symbol, startTime):
                     'totalPrice': float(order['cummulativeQuoteQty'])}, ignore_index=True)
     return df
 
-
+    
 
 # Create dataframe with all symbols
 symbol_df = pd.DataFrame()
