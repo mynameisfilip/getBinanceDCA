@@ -70,33 +70,34 @@ def getOrderHistory(symbol, startTime):
     query_string = urlencode(params)
     params['signature'] = hmac.new(SECRET_KEY.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
     r = requests.get(url=url, headers=HEADERS, params=params)
-
     processResponseCode(r)
-
     orders = r.json()
-    df = pd.DataFrame()
+    return orders
 
-    if len(orders) > 0:
-        for order in orders:
+def processOrderHistory(orderHistory):
+    df = pd.DataFrame()
+    if len(orderHistory) > 0:
+        for order in orderHistory:
             if order['status'] == 'FILLED':
                 df = df.append({
+                'orderId': order['orderId'],
                 'time': datetime.datetime.fromtimestamp(order['time']/1000),
                 'side':order['side'],
                 'pair': order['symbol'],
                 'price': order['price'],
                 'executedQty': float(order['executedQty']),
-                    'totalPrice': float(order['cummulativeQuoteQty'])}, ignore_index=True)
+                'totalPrice': float(order['cummulativeQuoteQty'])}, ignore_index=True)
     return df
-
-    
 
 # Create dataframe with all symbols
 symbol_df = pd.DataFrame()
 for symbol in symbols:
     orderHistory = getOrderHistory(symbol=symbol, startTime=ts_startTime)
-    if not orderHistory.empty:
-        totalAmount = orderHistory['executedQty'].sum()
-        totalPrice = orderHistory['totalPrice'].sum()
+    df_orderHistory = processOrderHistory(orderHistory)
+
+    if not df_orderHistory.empty:
+        totalAmount = df_orderHistory['executedQty'].sum()
+        totalPrice = df_orderHistory['totalPrice'].sum()
         dca = (totalPrice / totalAmount)
         symbol_df = symbol_df.append({
             'symbol': symbol,
@@ -124,3 +125,4 @@ totalSpent = dca_df['totalPrice'].sum()
 print(datetime.datetime.today())
 print(dca_df)
 print("total spent: " + str(round(totalSpent,3)))
+
