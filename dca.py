@@ -31,7 +31,7 @@ API_KEY = settings['API_KEY']
 SECRET_KEY = settings['SECRET_KEY']
 BASE_URL = settings['BASE_URL']
 HEADERS = {'X-MBX-APIKEY': API_KEY}
-orderHistoryFile = settings['orderHistoryFile']
+orderHistoryFile = os.path.join(invocationDir, (settings['orderHistoryFile']))
 cryptos = settings['cryptos']
 stableCoins = settings['stableCoins']
 
@@ -80,7 +80,7 @@ def processOrderHistory(orderHistory):
         for order in orderHistory:
             if order['status'] == 'FILLED':
                 df = df.append({
-                'orderId': order['orderId'],
+                'orderId': int(order['orderId']),
                 'time': datetime.datetime.fromtimestamp(order['time']/1000),
                 'side':order['side'],
                 'pair': order['symbol'],
@@ -89,40 +89,36 @@ def processOrderHistory(orderHistory):
                 'totalPrice': float(order['cummulativeQuoteQty'])}, ignore_index=True)
     return df
 
-# Create dataframe with all symbols
-symbol_df = pd.DataFrame()
+# Create orderHistory list
+orderHistory = []
 for symbol in symbols:
-    orderHistory = getOrderHistory(symbol=symbol, startTime=ts_startTime)
-    df_orderHistory = processOrderHistory(orderHistory)
+    orderHistory += getOrderHistory(symbol=symbol, startTime=ts_startTime)
 
-    if not df_orderHistory.empty:
-        totalAmount = df_orderHistory['executedQty'].sum()
-        totalPrice = df_orderHistory['totalPrice'].sum()
-        dca = (totalPrice / totalAmount)
-        symbol_df = symbol_df.append({
-            'symbol': symbol,
-            'totalAmount': totalAmount,
-            'totalPrice': totalPrice,
-            'dca': dca
-        }, ignore_index=True)
+#Transform orderHistory to pd DataFrame and save to file -> toDo - if file exists, get last order date and getOrderHistory from this date, then append to file
+df_orderHistory = processOrderHistory(orderHistory)
+if os.path.isfile(orderHistoryFile):
+    mode = 'a'
+    header = False
+else:
+    mode = 'w'
+    header = True
+df_orderHistory.to_csv(orderHistoryFile, sep=',', index=False, mode=mode, header=header)
 
-# Create dataframe from symbol_df filtered by crypto ie BTCUSDT & BTCBUSD are calculate together to get dca for BTC
-dca_df = pd.DataFrame()
+#Calculate totalAmount, TotalPrice, avg entry etc and save to df_dca
+df_dca = pd.DataFrame()
 for crypto in cryptos:
-
-    totalAmount = symbol_df[symbol_df['symbol'].str.contains(crypto)]['totalAmount'].sum()
-    totalPrice = symbol_df[symbol_df['symbol'].str.contains(crypto)]['totalPrice'].sum()
+    totalAmount = df_orderHistory[df_orderHistory['pair'].str.contains(crypto)]['executedQty'].sum()
+    totalPrice = df_orderHistory[df_orderHistory['pair'].str.contains(crypto)]['totalPrice'].sum()
     totalDca = totalPrice / totalAmount
-
-    dca_df = dca_df.append({
+    
+    df_dca = df_dca.append({
         'crypto': crypto,
         'totalAmount': round(totalAmount, 3),
         'totalPrice': round(totalPrice, 3),
         'avgEntry': round(totalDca,3)
     }, ignore_index=True)
 
-totalSpent = dca_df['totalPrice'].sum()
+totalSpent = df_dca['totalPrice'].sum()
 print(datetime.datetime.today())
-print(dca_df)
+print(df_dca)
 print("total spent: " + str(round(totalSpent,3)))
-
