@@ -14,7 +14,7 @@
       "USDT",
       "BUSD"
    ],
-   "startTime":"15.04.2022",
+   "startTime":"2022-04-15 00:00:00.000",
    "orderHistoryFile":"orderHistory.csv",
    "logFile":"dca.log",
    "logLevel":"DEBUG"
