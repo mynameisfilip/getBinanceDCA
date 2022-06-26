@@ -34,10 +34,7 @@ HEADERS = {'X-MBX-APIKEY': API_KEY}
 orderHistoryFile = os.path.join(invocationDir, (settings['orderHistoryFile']))
 cryptos = settings['cryptos']
 stableCoins = settings['stableCoins']
-
 startTime = settings['startTime']
-dt_startTime = datetime.datetime.strptime(startTime, '%d.%m.%Y')
-ts_startTime = int((datetime.datetime(dt_startTime.year, dt_startTime.month, dt_startTime.day).timestamp()) * 1000) 
 
 #Define logging
 logFile = os.path.join(invocationDir, (settings['logFile']))
@@ -52,6 +49,11 @@ for crypto in cryptos:
         symbols.append(crypto + stableCoin)
 
 #-------- Main functions --------#
+def getTimeStamp(s_datetime):
+    dt_datetime = datetime.datetime.strptime(s_datetime, '%Y-%m-%d %H:%M:%S.%f')
+    ts_datetime = int((datetime.datetime(dt_datetime.year, dt_datetime.month, dt_datetime.day, dt_datetime.hour, dt_datetime.minute, dt_datetime.second).timestamp()) * 1000)
+    return ts_datetime 
+
 def processResponseCode(response):
     if response.status_code != 200:
         logging.error(response.json())
@@ -89,20 +91,38 @@ def processOrderHistory(orderHistory):
                 'totalPrice': float(order['cummulativeQuoteQty'])}, ignore_index=True)
     return df
 
+#check if orderHistoryFile already exists
+if os.path.isfile(orderHistoryFile):
+    #load orderHistory from file to dataframe.
+    df_orderHistory = pd.read_csv(orderHistoryFile)
+    s_lastOrderDateTime = df_orderHistory['time'].max()
+    ts_startTime = (getTimeStamp(s_lastOrderDateTime) + 1000)
+    #Write mode = append, no header
+    mode = 'a'
+    header = False
+else:
+    df_orderHistory = pd.DataFrame()
+    ts_startTime = getTimeStamp(startTime)
+    mode = 'w'
+    header = True
+
 # Create orderHistory list
 orderHistory = []
 for symbol in symbols:
     orderHistory += getOrderHistory(symbol=symbol, startTime=ts_startTime)
 
-#Transform orderHistory to pd DataFrame and save to file -> toDo - if file exists, get last order date and getOrderHistory from this date, then append to file
-df_orderHistory = processOrderHistory(orderHistory)
-if os.path.isfile(orderHistoryFile):
-    mode = 'a'
-    header = False
+if len(orderHistory) > 0: # some orders exists
+    df_orderHistoryNew = processOrderHistory(orderHistory) #transform new orders to df
+    df_orderHistoryNew.to_csv(orderHistoryFile, sep=',', index=False, mode=mode, header=header) # save new orders to file
+    if df_orderHistory.empty: #No historic orders
+        df_orderHistory = df_orderHistoryNew
+    else:
+        #some historic orders, append new orders df_orderHistory
+        df_orderHistory.append(df_orderHistoryNew) ################# --------------------- NOT WORKING?
 else:
-    mode = 'w'
-    header = True
-df_orderHistory.to_csv(orderHistoryFile, sep=',', index=False, mode=mode, header=header)
+    if df_orderHistory.empty:
+        logging.info('No historic orders, no new orders')
+        sys.exit()
 
 #Calculate totalAmount, TotalPrice, avg entry etc and save to df_dca
 df_dca = pd.DataFrame()
