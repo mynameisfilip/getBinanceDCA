@@ -117,8 +117,8 @@ if len(orderHistory) > 0: # some orders exists
     if df_orderHistory.empty: #No historic orders
         df_orderHistory = df_orderHistoryNew
     else:
-        #some historic orders, append new orders df_orderHistory
-        df_orderHistory.append(df_orderHistoryNew) ################# --------------------- NOT WORKING?
+        #some historic orders, append new orders to df_orderHistory
+      df_orderHistory =  df_orderHistory.append(df_orderHistoryNew)
 else:
     if df_orderHistory.empty:
         logging.info('No historic orders, no new orders')
