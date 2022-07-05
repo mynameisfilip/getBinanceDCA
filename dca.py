@@ -34,6 +34,7 @@ HEADERS = {'X-MBX-APIKEY': API_KEY}
 orderHistoryFile = os.path.join(invocationDir, (settings['orderHistoryFile']))
 cryptos = settings['cryptos']
 stableCoins = settings['stableCoins']
+mainStableCoin = settings['mainStableCoin']
 startTime = settings['startTime']
 
 #Define logging
@@ -91,6 +92,16 @@ def processOrderHistory(orderHistory):
                 'totalPrice': float(order['cummulativeQuoteQty'])}, ignore_index=True)
     return df
 
+def getCurrentPrice(cryptoCoin:str, stableCoin:str):
+
+  endpoint = '/api/v3/ticker/price'
+  url = urljoin(BASE_URL, endpoint)
+  symbol = cryptoCoin + stableCoin
+  params = {'symbol' : symbol}
+
+  r = requests.get(url=url, headers=HEADERS, params=params) 
+  return float(r.json()['price']) 
+
 #check if orderHistoryFile already exists
 if os.path.isfile(orderHistoryFile):
     #load orderHistory from file to dataframe.
@@ -127,18 +138,29 @@ else:
 #Calculate totalAmount, TotalPrice, avg entry etc and save to df_dca
 df_dca = pd.DataFrame()
 for crypto in cryptos:
-    totalAmount = df_orderHistory[df_orderHistory['pair'].str.contains(crypto)]['executedQty'].sum()
-    totalPrice = df_orderHistory[df_orderHistory['pair'].str.contains(crypto)]['totalPrice'].sum()
-    totalDca = totalPrice / totalAmount
+    totalAmount = round(df_orderHistory[df_orderHistory['pair'].str.contains(crypto)]['executedQty'].sum(),3)
+    totalPrice = round(df_orderHistory[df_orderHistory['pair'].str.contains(crypto)]['totalPrice'].sum(),3)
+    totalDca = round(totalPrice / totalAmount,3)
     
+    currentPrice = round(getCurrentPrice(cryptoCoin=crypto, stableCoin=mainStableCoin),3)
+    currentValue = round((totalAmount * currentPrice),3)
+
+
     df_dca = df_dca.append({
         'crypto': crypto,
-        'totalAmount': round(totalAmount, 3),
-        'totalPrice': round(totalPrice, 3),
-        'avgEntry': round(totalDca,3)
+        'totalAmount': totalAmount,
+        'totalPrice': totalPrice,
+        'avgEntry': totalDca,
+        'currentPrice': currentPrice,
+        'currentValue': currentValue,
+        '%PnL': round(((currentValue/totalPrice)*100)- 100,3)
     }, ignore_index=True)
 
-totalSpent = df_dca['totalPrice'].sum()
+totalSpent = round(df_dca['totalPrice'].sum(),3)
+totalCurrentValue = round(df_dca['currentValue'].sum(),3)
+PnL = round(((totalCurrentValue / totalSpent) * 100) - 100,3)
 print(datetime.datetime.today())
 print(df_dca)
-print("total spent: " + str(round(totalSpent,3)))
+print('total spent: ' + str(totalSpent))
+print('current value: ' + str(totalCurrentValue))
+print('PnL ' + str(PnL) + '%')
