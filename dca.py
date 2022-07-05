@@ -93,7 +93,6 @@ def processOrderHistory(orderHistory):
     return df
 
 def getCurrentPrice(cryptoCoin:str, stableCoin:str):
-
   endpoint = '/api/v3/ticker/price'
   url = urljoin(BASE_URL, endpoint)
   symbol = cryptoCoin + stableCoin
