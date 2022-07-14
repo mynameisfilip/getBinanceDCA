@@ -85,6 +85,7 @@ def processOrderHistory(orderHistory):
                 df = df.append({
                 'orderId': int(order['orderId']),
                 'time': datetime.datetime.fromtimestamp(order['time']/1000),
+                'updateTime': datetime.datetime.fromtimestamp(order['updateTime']/1000),
                 'side':order['side'],
                 'pair': order['symbol'],
                 'price': order['price'],
@@ -160,6 +161,6 @@ totalCurrentValue = round(df_dca['currentValue'].sum(),3)
 PnL = round(((totalCurrentValue / totalSpent) * 100) - 100,3)
 print(datetime.datetime.today())
 print(df_dca)
-print('total spent: ' + str(totalSpent))
-print('current value: ' + str(totalCurrentValue))
-print('PnL ' + str(PnL) + '%')
+print(f'total spent: {str(totalSpent)}')
+print(f'current value: {str(totalCurrentValue)}')
+print(f'PnL {str(PnL)}%')
